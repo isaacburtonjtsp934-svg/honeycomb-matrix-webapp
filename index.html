@@ -372,7 +372,7 @@
     <div class="container">
         <div class="header">
             <h1>🐝 HoneyComb Matrix</h1>
-            <p>Интерактивная финансовая игра <span style="font-size: 12px; opacity: 0.7;">v1.2</span></p>
+            <p>Интерактивная финансовая игра <span style="font-size: 12px; opacity: 0.7;">v1.3</span></p>
         </div>
 
         <div class="currency-switcher">
@@ -425,6 +425,10 @@
                 💰 Пополнить
             </button>
             
+            <button class="modal-btn btn-secondary" onclick="checkPayment()">
+                🔍 Проверить оплату
+            </button>
+            
             <button class="modal-btn btn-secondary" onclick="withdraw()">
                 💸 Вывести
             </button>
@@ -450,7 +454,7 @@
 
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 HoneyComb Matrix Web App v1.2 загружен');
+            console.log('🚀 HoneyComb Matrix Web App v1.3 загружен');
             console.log('📡 API URL:', API_BASE_URL);
             console.log('🔗 Telegram Web App:', tg.initDataUnsafe);
             authenticateUser();
@@ -670,6 +674,40 @@
             }
         }
 
+        // Проверка оплаты
+        async function checkPayment() {
+            try {
+                showWalletMessage('🔍 Проверяем статус оплаты...', 'success');
+                
+                // Получаем последний инвойс пользователя
+                const response = await window.apiProxy.proxyRequest('/api/v1/payments/last-invoice', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.invoice_id) {
+                    const statusResponse = await window.apiProxy.proxyRequest(`/api/v1/payments/check-invoice/${response.invoice_id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    
+                    if (statusResponse.status === 'paid') {
+                        showWalletMessage(`✅ Оплата подтверждена! Зачислено: ${statusResponse.amount} ${statusResponse.currency}`, 'success');
+                        loadGameData(); // Обновляем баланс
+                    } else {
+                        showWalletMessage(`⏳ Статус оплаты: ${statusResponse.status}`, 'error');
+                    }
+                } else {
+                    showWalletMessage('❌ Нет активных инвойсов', 'error');
+                }
+            } catch (error) {
+                console.error('❌ Ошибка проверки оплаты:', error);
+                showWalletMessage(`❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+
         // Вывод средств
         async function withdraw() {
             const amount = parseFloat(document.getElementById('amount').value);
@@ -678,7 +716,31 @@
                 return;
             }
 
-            showWalletMessage('Функция вывода в разработке', 'error');
+            try {
+                const address = prompt('Введите адрес кошелька для вывода:');
+                if (!address) {
+                    showWalletMessage('Адрес не введен', 'error');
+                    return;
+                }
+
+                const data = await window.apiProxy.proxyRequest('/api/v1/payments/withdraw', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        currency: currentCurrency,
+                        address: address
+                    })
+                });
+
+                showWalletMessage(`✅ Вывод создан! К получению: ${data.amount_received} ${currentCurrency}`, 'success');
+                loadGameData(); // Обновляем данные
+            } catch (error) {
+                console.error('❌ Ошибка вывода:', error);
+                showWalletMessage(`❌ Ошибка: ${error.message}`, 'error');
+            }
         }
 
         // Покупка улья
