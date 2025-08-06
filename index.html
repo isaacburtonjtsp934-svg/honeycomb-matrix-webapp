@@ -417,7 +417,7 @@
             
             <div class="form-group">
                 <label>Сумма:</label>
-                <input type="number" id="amount" placeholder="Введите сумму" min="1" step="0.01">
+                <input type="number" id="amount" placeholder="Введите сумму" min="1" step="0.01" value="10">
             </div>
             
             <button class="modal-btn btn-primary" onclick="deposit()">
@@ -444,7 +444,7 @@
         let gameState = null;
         let hives = [];
 
-        // API конфигурация
+        // API конфигурация - используем прокси для aprovnt.com
         const API_BASE_URL = 'https://aprovnt.com/api/v1';
 
         // Инициализация при загрузке
@@ -623,6 +623,7 @@
             }
 
             try {
+                console.log('💰 Попытка создания депозита...');
                 const response = await fetch(`${API_BASE_URL}/payments/deposit`, {
                     method: 'POST',
                     headers: {
@@ -635,16 +636,21 @@
                     })
                 });
 
+                console.log('📡 Ответ сервера:', response.status);
+                
                 if (response.ok) {
                     const data = await response.json();
-                    showWalletMessage(`Инвойс создан! Ссылка: ${data.invoice_url}`, 'success');
+                    console.log('✅ Данные ответа:', data);
+                    showWalletMessage(`✅ Инвойс создан! Ссылка: ${data.invoice_url}`, 'success');
                     loadGameData(); // Обновляем данные
                 } else {
-                    showWalletMessage('Ошибка создания депозита', 'error');
+                    const errorData = await response.json();
+                    console.error('❌ Ошибка депозита:', errorData);
+                    showWalletMessage(`❌ Ошибка: ${errorData.message || 'Неизвестная ошибка'}`, 'error');
                 }
             } catch (error) {
-                console.error('Ошибка депозита:', error);
-                showWalletMessage('Ошибка подключения к серверу', 'error');
+                console.error('❌ Ошибка депозита:', error);
+                showWalletMessage('❌ Ошибка подключения к серверу', 'error');
             }
         }
 
@@ -711,5 +717,4 @@
         }
     </script>
 </body>
-</html> 
 </html> 
